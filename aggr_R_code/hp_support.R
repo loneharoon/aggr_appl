@@ -26,9 +26,7 @@ outlier_hp <- function(daymat){
   {
     prob_x[h] = round(1-(den_x[h]/max(den_x)),2)
   }
-  #myerrorplot(prob_x,fname)
-  #df=data.frame(day= c(format(start(daymat),"%d"):format(end(daymat),"%d")), score=prob_x,month=format(index(daymat[5,]),"%Y-%m"))
-  #df
+
   return(prob_x)
 }
 

@@ -1,21 +1,17 @@
-# In this file, I perform anomaly detection using OMNI and baselines on minutes data of Dataport homes only.
+# In this file, I perform anomaly detection using AGGR and baselines on minutes data of Dataport homes only.
 library(xts)
 library(data.table)
 library(ggplot2)
 library(gtools)
 library(plotly)
 library(TSdist)
-#library(Rlof)
-#library(HighDimOut) # to normalize output scores
 rm(list=ls())
 
 file1 <- "115.csv"
-#path2 <- "/Volumes/MacintoshHD2/Users/haroonr/Detailed_datasets/Dataport/mix_homes/default/" 
-path2 <- "/Volumes/MacintoshHD2/Users/haroonr/Detailed_datasets/Dataport/mix_homes/default/injected_anomalies/"
-source("/Volumes/MacintoshHD2/Users/haroonr/Dropbox/nilmtk_work/R_support/support_functions_offline.R")
-source("/Volumes/MacintoshHD2/Users/haroonr/Dropbox/R_codesDirectory/R_Codes/Matrix_division/Samys_support.R") #
-source("/Volumes/MacintoshHD2/Users/haroonr/Dropbox/R_codesDirectory/R_Codes/Matrix_division/hp_support.R") #SAMY METHOD
-setwd("/Volumes/MacintoshHD2/Users/haroonr/Dropbox/nilmtk_work/plots/")
+path2 <- "path to dataset"
+source("support_functions_offline.R")
+source("hp_support.R") 
+
 
 Sys.timezone()
 Sys.setenv('TZ' ="Asia/Kolkata")
@@ -45,7 +41,6 @@ dat_month <- lapply(dat_month, function(x){
 agg_score <- list()
 
 for (i in 1:length(dat_month)) {
-  #dat_month[[i]] = subset(dat_month[[i]],select=c("power"))
   dat_day <- split.xts(dat_month[[i]],"days",k=1)
   date_index <- sapply(dat_day,function(x) unique(as.Date(index(x),tz="Asia/Kolkata")))
   mat_day <- create_feature_matrix(dat_day)
@@ -64,69 +59,9 @@ for (i in 1:length(dat_month)) {
   colnames(agg_score[[i]]) <- c("lof","multi_user","hp")
 }
 
-file1 = "3538.csv"
-base_directory <- "/Volumes/MacintoshHD2/Users/haroonr/Dropbox/nilmtk_work/inter_results/"
+file1 = "115.csv"
+base_directory <- "save directory path"
 sub_dir <- strsplit(file1,'[.]')[[1]][1]
 dir.create(file.path(base_directory, sub_dir))
 agg_score <- do.call(rbind,agg_score)
 write.csv(fortify(agg_score),file=paste0(base_directory,sub_dir,"/","energy_score.csv"),row.names = FALSE)
-
-
-#LOGIC TO COMPUTE F-SCORE,PRECISION AND RECALL
-house="3538.csv"
-result <- paste0("/Volumes/MacintoshHD2/Users/haroonr/Dropbox/nilmtk_work/inter_results/",strsplit(house,'[.]')[[1]][1],"/","energy_score.csv")
-#gt_directory <- "/Volumes/MacintoshHD2/Users/haroonr/Detailed_datasets/Dataport/mix_homes/default/ground_truth/"
-gt_directory <- "/Volumes/MacintoshHD2/Users/haroonr/Dropbox/nilmtk_work/inter_results/ground_truth/"
-gt <- fread(paste0(gt_directory,house))
-#gt <- fread(paste0(gt_directory,"490.csv"))
-gt$Index <- as.Date(gt$Index,tz="Asia/Kolkata")
-res_df <- fread(result)
-
-compute_f_score(res_df,gt,threshold = 0.80)
-
-
-
-
-
-# READ CONTEXT DATA:
-# occu_data <- create_time_series_occupancydata(dat,baseline_limit = 500)
-occup_path <- "/Volumes/MacintoshHD2/Users/haroonr/Detailed_datasets/Dataport/occupancy/"
-df_occup <- fread(paste0(occup_path,file1))
-df_occup_xts <- xts(df_occup[,2],fasttime::fastPOSIXct(df_occup$Index)-19800)
-weather_file <- "/Volumes/MacintoshHD2/Users/haroonr/Detailed_datasets/Dataport/weather/Austin2014/minute_Austinweather.csv"
-df_con <- fread(weather_file)
-df_con_xts <- xts(df_con[,2:3],fasttime::fastPOSIXct(df_con$localminute) - 19800)
-df_sub <- df_con_xts['2014-06-01/2014-08-30']
-df_sub <- cbind(df_sub,df_occup_xts[index(df_sub)])
-dat_con_month <- split.xts(df_sub,"months",k=1)
-temp_data <- dat_con_month[[2]]
-
-con_anom_score_xts <- summarize_context_with_individual_features(temp_data)
-con_anom_score_xts
-anomaly_threshold = 0.80
-f_result <- decide_final_anomaly_status(energy_anom_score_xts,con_anom_score_xts,anomaly_threshold)
-savedirec <- "/Volumes/MacintoshHD2/Users/haroonr/Dropbox/nilmtk_work/inter_results/"
-write.csv(fortify(f_result), file = paste0(savedirec,file1),row.names = FALSE )
-
-visualize_context_data_facet_form(temp_data,'occupancy')
-dataframe_visualize_all_columns(df_xts["2014-07-03"])
-
-dataframe_visualize_all_columns(temp_data["2014-07-03"])
-
-plot(dat['2014-07-30'])
-plot(df_xts['2014-07-01','use'])
-
-
-###INJECTING  temperature SIGNATURE
-df_change <- temp_data
-df_change['2014-07-12 01:30:00/2014-07-12 10:00:00','TemperatureC'] <- 33
-plot(df_change['2014-07-12']$TemperatureC)
-# temp_data = df_change
-###########################
-
-###INJECTING  occupancy SIGNATURE
-df_change <- temp_data
-df_change['2014-07-12 01:30:00/2014-07-12 12:00:00','occupancy'] <- 1
-plot(df_change['2014-07-12']$occupancy)
-# temp_data = df_change
-###########################
