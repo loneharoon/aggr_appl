@@ -1,4 +1,4 @@
-##AGGR and APPL
+#AGGR and APPL
 
 This repository contains two folders: 
 1) aggr\_R\_code 2) appl\_python\_code. 
